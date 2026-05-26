@@ -1,0 +1,25 @@
+# Ignorar o arquivo do banco de dados
+pedidos.db
+
+# Ignorar a pasta de dados do WhatsApp Web (cookies, cache, etc.)
+# Esta pasta é criada pelo QWebEngineProfile para persistir o login.
+# O caminho exato pode variar um pouco dependendo do OS, mas ignorar a pasta raiz 'PedidosApp'
+# dentro do diretório de dados do aplicativo é o mais seguro.
+# Exemplo de caminho: C:/Users/Moacir/AppData/Local/PedidosApp/whatsapp_data
+# A entrada abaixo ignora a pasta 'PedidosApp' em qualquer lugar do projeto,
+# mas o QStandardPaths a cria em um local específico do sistema.
+# No entanto, é bom ter essa entrada caso a pasta seja criada localmente por engano.
+PedidosApp/
+
+# Ignorar diretórios de build e ambientes virtuais
+.venv/
+build/
+dist/
+__pycache__/
+
+# Ignorar arquivos de configuração do IDE
+.idea/
+*.iml
+
+# Ignorar arquivos de especificação do PyInstaller
+*.spec
