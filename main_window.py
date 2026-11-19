@@ -9,7 +9,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtWebEngineWidgets import QWebEngineView
 
 from db_manager import DBManager
-from whatsapp_handler import WhatsAppHandler
+from whatsapp_handler import WhatsAppHandler, normalizar_telefone
 
 DB_FILE = "pedidos.db"
 
@@ -76,12 +76,18 @@ class SistemaPedidos(QMainWindow):
         self.atualizar_tabela()
 
     def salvar_pedido(self):
-        nome = self.input_nome.text()
-        telefone = self.input_telefone.text()
-        detalhes = self.input_detalhes.text()
+        nome = self.input_nome.text().strip()
+        telefone = self.input_telefone.text().strip()
+        detalhes = self.input_detalhes.text().strip()
 
         if not nome or not telefone or not detalhes:
             QMessageBox.warning(self, "Aviso", "Preencha todos os campos!")
+            return
+
+        try:
+            telefone = normalizar_telefone(telefone)
+        except ValueError as e:
+            QMessageBox.warning(self, "Telefone inválido", str(e))
             return
 
         data_hora = datetime.now().strftime('%d/%m/%Y %H:%M:%S')
@@ -125,9 +131,9 @@ class SistemaPedidos(QMainWindow):
                 btn_acao.clicked.connect(lambda checked, p_id=pedido['id'], p_nome=pedido['nome'], p_tel=pedido['telefone']: self.marcar_pronto(p_id, p_nome, p_tel))
                 action_layout.addWidget(btn_acao)
             else: # status == "Pronto"
-                lbl_notificado = QLabel("Notificado ✓")
+                lbl_notificado = QLabel("Pronto • envio não confirmado")
                 lbl_notificado.setStyleSheet("color: #155724; font-weight: bold; padding: 6px 0px; min-height: 20px; font-size: 11px;")
-                btn_reenviar = QPushButton("Reenviar 📢")
+                btn_reenviar = QPushButton("Abrir mensagem")
                 btn_reenviar.setStyleSheet("background-color: #00a884; color: white; font-weight: bold; padding: 6px 10px; min-width: 80px; min-height: 20px; font-size: 11px;")
                 btn_reenviar.clicked.connect(lambda checked, p_id=pedido['id'], p_nome=pedido['nome'], p_tel=pedido['telefone']: self.reenviar_aviso(p_id, p_nome, p_tel))
                 action_layout.addWidget(lbl_notificado)
@@ -139,16 +145,19 @@ class SistemaPedidos(QMainWindow):
             self.tabela.setCellWidget(row_number, 5, action_widget)
 
     def marcar_pronto(self, pedido_id, nome, telefone):
-        print(f"DEBUG: Chamado marcar_pronto para pedido_id={pedido_id}")
         try:
             self.db_manager.update_pedido_status(pedido_id, 'Pronto')
-            print(f"DEBUG: Pedido {pedido_id} marcado como 'Pronto' no DB.")
         except Exception as e:
             QMessageBox.critical(self, "Erro no Banco de Dados", f"Não foi possível atualizar o status do pedido: {e}")
             return
 
         mensagem = f"Ei, {nome}! Seu pedido #{pedido_id} ficou pronto! 🎉 Pode vir retirar no balcão."
-        self.whatsapp_handler.send_whatsapp_message(telefone, mensagem)
+        try:
+            self.whatsapp_handler.send_whatsapp_message(telefone, mensagem)
+        except ValueError as e:
+            QMessageBox.warning(self, "Telefone inválido", str(e))
+            self.atualizar_tabela()
+            return
         self.tabs.setCurrentIndex(1) # Vai direto para a aba do WhatsApp
         self.atualizar_tabela() # Atualiza a tabela após marcar como pronto
 
