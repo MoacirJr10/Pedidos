@@ -1,5 +1,5 @@
 import sqlite3
-import os
+from contextlib import closing
 
 class DBManager:
     def __init__(self, db_file="pedidos.db"):
@@ -8,7 +8,7 @@ class DBManager:
 
     def _init_db(self):
         """Garante que a tabela no banco SQLite exista ao iniciar o sistema."""
-        with sqlite3.connect(self.db_file) as conn:
+        with closing(sqlite3.connect(self.db_file)) as conn, conn:
             cursor = conn.cursor()
             cursor.execute("""
                            CREATE TABLE IF NOT EXISTS pedidos (
@@ -24,7 +24,7 @@ class DBManager:
 
     def add_pedido(self, nome, telefone, detalhes, status, data_hora):
         """Adiciona um novo pedido ao banco de dados."""
-        with sqlite3.connect(self.db_file) as conn:
+        with closing(sqlite3.connect(self.db_file)) as conn, conn:
             cursor = conn.cursor()
             cursor.execute(
                 "INSERT INTO pedidos (nome, telefone, detalhes, status, data_hora) VALUES (?, ?, ?, ?, ?)",
@@ -35,7 +35,7 @@ class DBManager:
 
     def get_all_pedidos(self):
         """Retorna todos os pedidos do banco de dados, ordenados do mais recente para o mais antigo."""
-        with sqlite3.connect(self.db_file) as conn:
+        with closing(sqlite3.connect(self.db_file)) as conn, conn:
             conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
             cursor.execute("SELECT * FROM pedidos ORDER BY id DESC")
@@ -43,14 +43,16 @@ class DBManager:
 
     def update_pedido_status(self, pedido_id, status):
         """Atualiza o status de um pedido."""
-        with sqlite3.connect(self.db_file) as conn:
+        if status not in ("Em preparação", "Pronto"):
+            raise ValueError("Status inválido")
+        with closing(sqlite3.connect(self.db_file)) as conn, conn:
             cursor = conn.cursor()
             cursor.execute("UPDATE pedidos SET status = ? WHERE id = ?", (status, pedido_id))
             conn.commit()
 
     def delete_concluidos(self):
         """Apaga todos os pedidos com status 'Pronto' do banco de dados."""
-        with sqlite3.connect(self.db_file) as conn:
+        with closing(sqlite3.connect(self.db_file)) as conn, conn:
             cursor = conn.cursor()
             cursor.execute("DELETE FROM pedidos WHERE status = 'Pronto'")
             conn.commit()
